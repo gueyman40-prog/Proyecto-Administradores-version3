@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Control de Órdenes de Servicio - Pago de Viajes Tercerizados | CDN & CCN</title>
+  <meta name="description" content="Dashboard de gestión y pago de viajes a transportistas tercerizados: entrega de equipo frío, botellón y fletes para CDN y CCN con exportación a Excel.">
+  
+  <!-- Google Fonts: Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- SheetJS para generar archivos Excel reales (.xlsx) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <!-- Estilos del Sistema -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <div class="app-container">
+
+    <!-- ========================================================
+         PANTALLA 0: INICIO DE SESIÓN Y SEGURIDAD POR AGENCIA
+         ======================================================== -->
+    <div id="loginScreen" class="login-screen">
+      
+      <!-- Barra superior en vivo: Reloj y Fecha local -->
+      <div class="login-top-meta" id="loginTopMeta">
+        <div class="login-meta-pill">
+          <span class="meta-dot"></span>
+          <span id="loginLiveShift">🌤️ Turno Vespertino</span>
+        </div>
+        <div class="login-meta-pill">
+          <span class="meta-clock-icon">🕒</span>
+          <span id="loginLiveClock" class="live-clock-digits">12:00:00 PM</span>
+        </div>
+        <div class="login-meta-pill login-date-pill">
+          <span id="loginLiveDate">Martes, 06 de Octubre</span>
+        </div>
+      </div>
+
+      <div class="login-card dynamic-login-card">
+        
+        <!-- Header Principal de Seguridad -->
+        <div class="login-header">
+          <div class="login-shield-badge">🛡️ Control de Acceso & Seguridad · CDN & CCN</div>
+          <h1>Ingreso al Sistema</h1>
+          <p>Autenticación segmentada por agencia autorizada</p>
+        </div>
+
+        <!-- ========================================================
+             BANNER DE BIENVENIDA DINÁMICA POR HORARIO Y AGENCIA
+             ======================================================== -->
+        <div class="dynamic-welcome-box" id="dynamicWelcomeBanner" data-period="afternoon">
+          <div class="welcome-box-glow"></div>
+          
+          <div class="welcome-icon-column">
+            <div class="welcome-time-avatar" id="welcomeTimeAvatar">
+              <span id="welcomeTimeIcon" class="time-avatar-icon">🌤️</span>
+              <span class="avatar-ring"></span>
+            </div>
+            <span class="welcome-shift-tag" id="welcomeShiftTag">Turno Vespertino</span>
+          </div>
+
+          <div class="welcome-text-column">
+            <div class="welcome-title-row">
+              <h2 id="welcomeGreetingTitle" class="welcome-greeting-title">
+                ¡Buenas tardes, Operador!
+              </h2>
+            </div>
+            <p id="welcomeGreetingQuote" class="welcome-greeting-quote">
+              Continuemos optimizando el flujo de servicio.
+            </p>
+            <div class="welcome-active-agency-chip" id="welcomeActiveAgencyChip" style="display: none;">
+              <span class="chip-label">Agencia asignada:</span>
+              <strong id="welcomeActiveAgencyName">--</strong>
+              <button type="button" id="btnWelcomeChangeAgency" class="btn-chip-change" title="Cambiar agencia">🔄 Cambiar</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Barra de Simulación Horaria (Permite probar Mañana, Tarde y Noche al instante) -->
+        <div class="time-sim-container">
+          <span class="time-sim-label">Modo horario:</span>
+          <div class="time-sim-buttons">
+            <button type="button" class="sim-pill" data-sim="morning" title="Ver bienvenida matutina">☀️ Mañana</button>
+            <button type="button" class="sim-pill active" data-sim="afternoon" title="Ver bienvenida vespertina">🌤️ Tarde</button>
+            <button type="button" class="sim-pill" data-sim="night" title="Ver bienvenida nocturna">🌙 Noche</button>
+            <button type="button" class="sim-pill sim-pill-auto" data-sim="auto" title="Hora real del sistema">⚡ Automático</button>
+          </div>
+        </div>
+
+        <form id="loginForm" autocomplete="off">
+          
+          <!-- ========================================================
+               PASO 1: IDENTIFICACIÓN DE AGENCIA / MODO ADMINISTRADOR
+               ======================================================== -->
+          <div id="loginStepAgency" class="login-flow-step active-step">
+            <div class="login-tabs">
+              <button type="button" class="login-tab-btn active" id="tabLoginAgency" data-mode="agency">🏢 Acceso Agencia</button>
+              <button type="button" class="login-tab-btn" id="tabLoginAdmin" data-mode="admin">👑 Administrador</button>
+            </div>
+
+            <!-- Modo Agencia: Selector de Agencia -->
+            <div class="form-group" id="groupAgencySelect">
+              <label for="loginAgencySelect" class="form-label">
+                <span>Agencia Autorizada <strong style="color:var(--accent-rose)">*</strong></span>
+                <span class="tag-link">1 al 24</span>
+              </label>
+              <div class="input-wrapper">
+                <span class="input-icon">🏢</span>
+                <select id="loginAgencySelect" class="form-control" required>
+                  <option value="" disabled selected>-- Seleccione su Agencia --</option>
+                  <!-- 18 agencias cargadas dinámicamente -->
+                </select>
+              </div>
+              <div class="helper-text">Seleccione la sucursal para activar su bienvenida personalizada.</div>
+            </div>
+
+            <!-- Modo Admin: Usuario -->
+            <div class="form-group" id="groupAdminUser" style="display: none;">
+              <label for="loginUsername" class="form-label">
+                <span>Usuario Administrador <strong style="color:var(--accent-rose)">*</strong></span>
+              </label>
+              <div class="input-wrapper">
+                <span class="input-icon">👤</span>
+                <input type="text" id="loginUsername" class="form-control" placeholder="admin" value="admin">
+              </div>
+              <div class="helper-text">Cuenta con privilegios centrales y supervisión total.</div>
+            </div>
+
+            <button type="button" id="btnContinueToPassword" class="btn btn-primary" style="width: 100%; margin-top: 8px;">
+              <span>Continuar al Acceso</span>
+              <span class="btn-arrow">➜</span>
+            </button>
+          </div>
+
+          <!-- ========================================================
+               PASO 2: INGRESO DE CONTRASEÑA Y LOGIN DINÁMICO
+               ======================================================== -->
+          <div id="loginStepPassword" class="login-flow-step" style="display: none;">
+            
+            <div class="login-selected-summary">
+              <div class="summary-info">
+                <span class="summary-badge-icon" id="stepSelectedIcon">🏢</span>
+                <div class="summary-texts">
+                  <span class="summary-pre">Accediendo como:</span>
+                  <strong class="summary-name" id="stepSelectedAgencyName">1-B.DISTRIBUC.MGA</strong>
+                </div>
+              </div>
+              <button type="button" id="btnChangeAgencyStep2" class="btn-summary-change" title="Cambiar agencia">
+                🔄 Cambiar
+              </button>
+            </div>
+
+            <!-- Campo de Contraseña con toggle de visibilidad -->
+            <div class="form-group">
+              <label for="loginPassword" class="form-label">
+                <span>Contraseña de Acceso <strong style="color:var(--accent-rose)">*</strong></span>
+                <span class="tag-link" id="loginPassHint">Segura</span>
+              </label>
+              <div class="input-wrapper password-input-wrapper">
+                <span class="input-icon">🔒</span>
+                <input type="password" id="loginPassword" class="form-control" placeholder="Ingrese su contraseña de acceso" required>
+                <button type="button" id="btnTogglePasswordVis" class="btn-password-toggle" title="Mostrar/Ocultar contraseña" aria-label="Mostrar u ocultar contraseña">
+                  👁️
+                </button>
+              </div>
+              <div class="helper-text" id="loginHelperText">Credencial vinculada a su agencia.</div>
+            </div>
+
+            <!-- Error Alert si falla login -->
+            <div id="loginErrorMsg" style="display: none; padding: 12px 14px; background: rgba(225, 29, 72, 0.1); border: 1px solid rgba(225, 29, 72, 0.35); border-radius: var(--radius-sm); color: #be123c; font-size: 0.84rem; font-weight: 600; margin-bottom: 16px; animation: shakeError 0.35s ease;">
+              ⚠️ Credenciales incorrectas. Verifique e intente nuevamente.
+            </div>
+
+            <button type="submit" id="btnLoginSubmit" class="btn btn-primary btn-submit-dynamic" style="width: 100%;">
+              <span>🚀 Iniciar Sesión Segura</span>
+            </button>
+
+            <button type="button" id="btnBackToStep1" class="btn btn-link-back" style="width: 100%; margin-top: 10px;">
+              ← Elegir otra agencia o usuario
+            </button>
+          </div>
+
+        </form>
+
+        <div class="login-footer-actions">
+          <button type="button" id="loginBtnToggleTheme" class="btn btn-outline btn-sm">
+            🌙 Modo Oscuro
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================
+         PANTALLA 1: DASHBOARD PREVIO (SELECCIÓN DE EMPRESA)
+         ======================================================== -->
+    <div id="portalScreen" class="portal-screen" style="display: none;">
+      
+      <!-- Barra de Sesión Activa -->
+      <div class="session-bar" id="sessionBarPortal" style="width: 100%; max-width: 960px; margin-bottom: 24px;">
+        <div class="session-user-info">
+          <div class="session-agency-pill" id="sessionBadgePortal">
+            <span>🏢</span> <span id="sessionAgencyNamePortal">Agencia</span>
+          </div>
+          <span style="font-size: 0.8rem; color: var(--text-muted);" id="sessionRoleTextPortal">Operador Asignado</span>
+        </div>
+        <div class="session-actions">
+          <button type="button" class="btn btn-outline btn-sm" id="btnAuditLogsPortal" style="display: none;">
+            📊 Bitácora Conexiones
+          </button>
+          <button type="button" class="btn-logout" id="btnLogoutPortal">
+            🚪 Cerrar Sesión
+          </button>
+        </div>
+      </div>
+
+      <div class="portal-hero">
+        <div class="portal-hero-badge">🚚 Control de Fletes & Viajes Tercerizados</div>
+        <h1>¿Qué tipo de orden desea realizar?</h1>
+        <p>Seleccione la empresa para ingresar al módulo de liquidación de viajes (entrega de equipo frío, botellón y fletes) y emisión del reporte oficial en Excel.</p>
+      </div>
+
+      <!-- Tarjetas de Empresa: CDN vs CCN con Logos Oficiales -->
+      <div class="portal-cards-grid">
+
+        <!-- Opción 1: CDN -->
+        <div class="portal-card cdn-card" id="btnSelectCDN">
+          <div>
+            <div class="portal-card-header">
+              <div class="portal-logo-frame cdn-frame" id="frameLogoCDN">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" width="160" height="75" class="portal-logo-svg">
+                  <g transform="translate(10, 10)">
+                    <path d="M 125,50 C 122,25 105,10 82,10 C 55,10 38,32 38,62 C 38,92 55,114 82,114 C 105,114 122,99 125,74 L 98,74 C 95,84 89,91 80,91 C 67,91 59,79 59,62 C 59,45 67,33 80,33 C 89,33 95,40 98,50 Z" fill="#1d4ed8" />
+                    <path d="M 105,38 L 132,38 C 152,38 166,51 166,73 C 166,95 152,108 132,108 L 105,108 Z M 123,54 L 123,92 L 131,92 C 141,92 148,84 148,73 C 148,62 141,54 131,54 Z" fill="#1d4ed8" />
+                    <path d="M 172,58 L 187,58 L 187,68 C 192,60 200,56 211,56 C 226,56 235,66 235,82 L 235,108 L 217,108 L 217,85 C 217,76 212,71 204,71 C 196,71 190,76 190,85 L 190,108 L 172,108 Z" fill="#16a34a" />
+                    <path d="M 32,108 C 80,138 180,140 248,96 C 220,126 100,128 32,108 Z" fill="#16a34a" />
+                    <text x="150" y="142" text-anchor="middle" font-family="'Arial Black', 'Montserrat', sans-serif" font-size="15" font-weight="900" font-style="italic" letter-spacing="1.2" fill="#1d4ed8">COMPAÑÍA DISTRIBUIDORA</text>
+                    <text x="150" y="160" text-anchor="middle" font-family="'Arial Black', 'Montserrat', sans-serif" font-size="14" font-weight="900" font-style="italic" letter-spacing="1.8" fill="#1d4ed8">DE NICARAGUA S.A.</text>
+                  </g>
+                </svg>
+              </div>
+              <span class="portal-card-pill cdn-pill">Distribución & Logística</span>
+            </div>
+            <h2>Compañía Distribuidora de Nicaragua (CDN)</h2>
+            <p>Registro y liquidación de viajes de entrega de equipo frío, botellón y rutas de distribución tercerizadas.</p>
+          </div>
+          <div class="portal-card-footer">
+            <span class="portal-card-stat">
+              <strong id="portalCdnCount">0</strong> viajes registrados
+            </span>
+            <span class="portal-card-action cdn-action">
+              Ingresar a CDN &rarr;
+            </span>
+          </div>
+        </div>
+
+        <!-- Opción 2: CCN -->
+        <div class="portal-card ccn-card" id="btnSelectCCN">
+          <div>
+            <div class="portal-card-header">
+              <div class="portal-logo-frame ccn-frame" id="frameLogoCCN">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" width="160" height="75" class="portal-logo-svg">
+                  <g transform="translate(10, 10)">
+                    <path d="M 175,34 C 172,14 158,2 136,2 C 114,2 99,17 97,37 L 118,37 C 120,27 126,20 136,20 C 146,20 152,26 154,34 Z" fill="#15803d" />
+                    <path d="M 148,68 C 145,46 130,32 108,32 C 84,32 68,52 68,80 C 68,108 84,128 108,128 C 130,128 145,114 148,92 L 126,92 C 123,103 117,110 108,110 C 96,110 89,97 89,80 C 89,63 96,50 108,50 C 117,50 123,57 126,68 Z" fill="#15803d" />
+                    <path d="M 144,48 L 165,48 L 195,96 L 195,48 L 214,48 L 214,124 L 193,124 L 163,76 L 163,124 L 144,124 Z" fill="#15803d" />
+                    <path d="M 210,105 C 225,85 248,50 282,18" stroke="#d97706" stroke-width="3.5" stroke-linecap="round" fill="none" />
+                    <path d="M 276,16 C 286,20 288,32 278,35 C 268,32 268,22 276,16 Z" fill="#d97706" />
+                    <path d="M 264,28 C 274,32 276,44 266,47 C 256,44 256,34 264,28 Z" fill="#d97706" />
+                    <path d="M 250,42 C 260,46 262,58 252,61 C 242,58 242,48 250,42 Z" fill="#d97706" />
+                    <path d="M 236,56 C 246,60 248,72 238,75 C 228,72 228,62 236,56 Z" fill="#d97706" />
+                    <path d="M 222,70 C 232,74 234,86 224,89 C 214,86 214,76 222,70 Z" fill="#d97706" />
+                    <path d="M 24,106 C 75,136 185,138 255,92 C 225,124 95,126 24,106 Z" fill="#d97706" />
+                    <text x="150" y="146" text-anchor="middle" font-family="'Arial Black', 'Montserrat', sans-serif" font-size="15" font-weight="900" letter-spacing="1.2" fill="#15803d">COMPAÑÍA CERVECERA</text>
+                    <text x="150" y="164" text-anchor="middle" font-family="'Arial Black', 'Montserrat', sans-serif" font-size="14" font-weight="900" letter-spacing="1.8" fill="#15803d">DE NICARAGUA S.A.</text>
+                  </g>
+                </svg>
+              </div>
+              <span class="portal-card-pill ccn-pill">Cervecería & Operaciones</span>
+            </div>
+            <h2>Compañía Cervecera de Nicaragua (CCN)</h2>
+            <p>Registro y liquidación de viajes, traslados entre plantas, bodegas y fletes de carga pesada tercerizados.</p>
+          </div>
+          <div class="portal-card-footer">
+            <span class="portal-card-stat">
+              <strong id="portalCcnCount">0</strong> viajes registrados
+            </span>
+            <span class="portal-card-action ccn-action">
+              Ingresar a CCN &rarr;
+            </span>
+          </div>
+        </div>
+
+      </div>
+
+      <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: center;">
+        <button id="portalBtnToggleTheme" class="btn btn-outline btn-sm">
+          🌙 Modo Oscuro
+        </button>
+        <button id="portalBtnOpenCatalog" class="btn btn-outline btn-sm">
+          ⚙️ Gestionar Catálogos
+        </button>
+      </div>
+
+    </div>
+
+
+    <!-- ========================================================
+         PANTALLA 2: DASHBOARD DE CAPTURA Y GESTIÓN DE ÓRDENES
+         ======================================================== -->
+    <div id="mainScreen" class="main-screen" style="display: none;">
+      
+      <!-- Barra de Sesión Activa en Dashboard -->
+      <div class="session-bar" id="sessionBarMain">
+        <div class="session-user-info">
+          <div class="session-agency-pill" id="sessionBadgeMain">
+            <span>🏢</span> <span id="sessionAgencyNameMain">Agencia</span>
+          </div>
+          <span style="font-size: 0.8rem; color: var(--text-muted);" id="sessionRoleTextMain">Operador Asignado</span>
+        </div>
+        <div class="session-actions">
+          <button type="button" class="btn btn-outline btn-sm" id="btnAuditLogsMain" style="display: none;">
+            📊 Bitácora Conexiones
+          </button>
+          <button type="button" class="btn-logout" id="btnLogoutMain">
+            🚪 Cerrar Sesión
+          </button>
+        </div>
+      </div>
+
+      <!-- Encabezado con Botón para Volver y Cambiar de Empresa -->
+      <header class="app-header">
+        <div class="brand-section">
+          <button id="btnBackToPortal" class="btn-back-portal" title="Regresar a elegir empresa">
+            &larr; Cambiar Empresa
+          </button>
+
+          <div id="activeCompanyBadge" class="active-company-pill cdn">
+            <!-- Rellenado dinámicamente con logo oficial y nombre corporativo -->
+          </div>
+
+          <div class="brand-title">
+            <h1 id="brandHeaderTitle">Control de Órdenes de Servicio</h1>
+            <p id="brandHeaderSubtitle">Liquidación de Viajes por Entrega de Equipo Frío, Botellón y Rutas</p>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <button id="btnOpenCatalog" class="btn btn-outline btn-sm" title="Administrar catálogo de Clientes y Cuentas">
+            ⚙️ Catálogos
+          </button>
+          <button id="btnToggleTheme" class="btn btn-outline btn-sm" title="Cambiar tema">
+            🌙 Modo Oscuro
+          </button>
+        </div>
+      </header>
+
+      <!-- Indicadores KPI -->
+      <section class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon total">🚚</div>
+          <div class="stat-info">
+            <div class="stat-value" id="statTotal">0</div>
+            <div class="stat-label">Total Viajes</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon cdn">⚡</div>
+          <div class="stat-info">
+            <div class="stat-value" id="statCdn">0</div>
+            <div class="stat-label">Viajes CDN</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon ccn">🛡️</div>
+          <div class="stat-info">
+            <div class="stat-value" id="statCcn">0</div>
+            <div class="stat-label">Viajes CCN</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon today" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">💰</div>
+          <div class="stat-info">
+            <div class="stat-value" id="statTotalAmount" style="font-size: 1.35rem; color: #10b981;">C$ 0.00</div>
+            <div class="stat-label">Monto Liquidado</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Disposición Principal: Formulario a la Izquierda, Registro y Tabla a la Derecha -->
+      <main class="main-grid">
+
+        <!-- PANEL DE ENCUESTA / FORMULARIO -->
+        <section class="panel">
+          <div class="panel-header">
+            <div class="panel-title">
+              <span>📋</span> Nueva Orden de Servicio / Viaje
+            </div>
+            <button id="btnClearForm" type="button" class="btn btn-outline btn-sm" title="Limpiar todos los campos del formulario">
+              Limpiar
+            </button>
+          </div>
+
+          <form id="orderForm" autocomplete="off">
+
+            <!-- 1. PROVEEDOR (Lista Desplegable Sincronizada con NOMBRE) -->
+            <div class="form-group">
+              <label for="clientIdSelect" class="form-label">
+                <span>PROVEEDOR <strong style="color:var(--accent-rose)">*</strong></span>
+                <span class="tag-link">🔗 Enlazado con NOMBRE</span>
+              </label>
+              <div class="input-wrapper">
+                <span class="input-icon">🆔</span>
+                <select id="clientIdSelect" class="form-control" required>
+                  <option value="" disabled selected>-- Seleccione PROVEEDOR (Código) --</option>
+                  <!-- Opciones cargadas con el código del proveedor (basado en el cliente) -->
+                </select>
+              </div>
+              <div class="helper-text">Código de proveedor (basado en el código del cliente).</div>
+            </div>
+
+            <!-- 2. NOMBRE (Lista Desplegable Sincronizada con PROVEEDOR) -->
+            <div class="form-group">
+              <label for="clientNameSelect" class="form-label">
+                <span>NOMBRE <strong style="color:var(--accent-rose)">*</strong></span>
+                <span class="tag-link">🔗 Enlazado con PROVEEDOR</span>
+              </label>
+              <div class="input-wrapper">
+                <span class="input-icon">👤</span>
+                <select id="clientNameSelect" class="form-control" required>
+                  <option value="" disabled selected>-- Seleccione NOMBRE --</option>
+                  <!-- Opciones cargadas con nombres y apellidos completos -->
+                </select>
+              </div>
+              <div class="helper-text">Nombre completo del proveedor / cliente.</div>
+            </div>
+
+            <!-- 3. SERVICIO (Nuevo Campo) -->
+            <div class="form-group">
+              <label for="serviceInput" class="form-label">
+                <span>SERVICIO <strong style="color:var(--accent-rose)">*</strong></span>
+                <span class="tag-link">⚙️ Clasificación</span>
+              </label>
+              <div class="input-wrapper">
+                <span class="input-icon">📦</span>
+                <input type="text" id="serviceInput" list="serviceListOptions" class="form-control" placeholder="Ej: FLETE, DISTRIBUCION, TRASLADO..." required>
+                <datalist id="serviceListOptions">
+                  <option value="FLETE">
+                  <option value="DISTRIBUCION">
+                  <option value="TRANSPORTE">
+                  <option value="ENTREGA EQUIPO FRIO">
+                  <option value="RETIRO EQUIPO FRIO">
+                  <option value="BOTELLON">
+                  <option value="TRASLADO">
+                  <option value="FORANEO">
+                  <option value="EXPRESS">
+                </datalist>
+              </div>
+              <div class="helper-text">Tipo o clasificación de servicio realizado.</div>
+            </div>
+
+            <!-- 4. DESCRIPCION DEL SERVICIO (Lista Desplegable Sincronizada con CUENTA) -->
+            <div class="form-group">
+              <label for="orderReasonSelect" class="form-label">
+                <span>DESCRIPCION DEL SERVICIO <strong style="color:var(--accent-rose)">*</strong></span>
+                <span class="tag-link">🔗 Enlazado con CUENTA</span>
+              </label>
+              <div class="input-wrapper">
+                <span class="input-icon">🚚</span>
+                <select id="orderReasonSelect" class="form-control" required>
+                  <option value="" disabled selected>-- Seleccione DESCRIPCION DEL SERVICIO --</option>
+                  <!-- Opciones cargadas dinámicamente -->
+                </select>
+              </div>
+              <div class="helper-text">Descripción estandarizada del tipo de servicio.</div>
+            </div>
+
+            <!-- 5. CONCEPTO (Detalle Libre) -->
+            <div class="form-group">
+              <label for="orderConcept" class="form-label">
+                <span>CONCEPTO <strong style="color:var(--accent-rose)">*</strong></span>
+              </label>
+              <textarea id="orderConcept" class="form-control" rows="2" placeholder="Detalle específico del viaje, ruta o carga transportada..." required></textarea>
+              <div class="helper-text">Detalle de la ruta o carga transportada por el proveedor.</div>
+            </div>
+
+            <!-- 6. CUENTA (Lista Desplegable Sincronizada con DESCRIPCION DEL SERVICIO) -->
+            <div class="form-group">
+              <label for="accountNumberSelect" class="form-label">
+                <span>CUENTA <strong style="color:var(--accent-rose)">*</strong></span>
+                <span class="tag-link">🔗 Enlazado con DESCRIPCION</span>
+              </label>
+              <div class="input-wrapper">
+                <span class="input-icon">💳</span>
+                <select id="accountNumberSelect" class="form-control" required>
+                  <option value="" disabled selected>-- Seleccione CUENTA --</option>
+                  <!-- Opciones cargadas dinámicamente -->
+                </select>
+              </div>
+              <div class="helper-text">Cuenta contable emparejada directamente con el servicio.</div>
+            </div>
+
+            <!-- 7. GRUPO DE COMPRA (Nuevo Campo) -->
+            <div class="form-group">
+              <label for="purchaseGroupInput" class="form-label">
+                <span>GRUPO DE COMPRA <strong style="color:var(--accent-rose)">*</strong></span>
+                <span class="tag-link">🏷️ SAP MM</span>
+              </label>
+              <div class="input-wrapper">
+                <span class="input-icon">🏢</span>
+                <input type="text" id="purchaseGroupInput" list="purchaseGroupOptions" class="form-control" placeholder="Ej: GC01, LOG01, G01..." required>
+                <datalist id="purchaseGroupOptions">
+                  <option value="GC01">
+                  <option value="GC02">
+                  <option value="LOG01">
+                  <option value="DIST01">
+                  <option value="TRANSP01">
+                </datalist>
+              </div>
+              <div class="helper-text">Grupo de compra asignado a la orden.</div>
+            </div>
+
+            <!-- 8. GERENCIA (Nuevo Campo) -->
+            <div class="form-group">
+              <label for="managementInput" class="form-label">
+                <span>GERENCIA <strong style="color:var(--accent-rose)">*</strong></span>
+                <span class="tag-link">🏛️ Área</span>
+              </label>
+              <div class="input-wrapper">
+                <span class="input-icon">👔</span>
+                <input type="text" id="managementInput" list="managementOptions" class="form-control" placeholder="Ej: Gerencia de Distribución..." required>
+                <datalist id="managementOptions">
+                  <option value="Gerencia de Distribución">
+                  <option value="Gerencia de Logística">
+                  <option value="Gerencia de Operaciones">
+                  <option value="Gerencia de Ventas">
+                  <option value="Gerencia de Cadena de Suministro">
+                </datalist>
+              </div>
+              <div class="helper-text">Gerencia responsable de la aprobación del servicio.</div>
+            </div>
+
+            <!-- 9. LIBERA (Lista Desplegable Sincronizada con CECO) -->
+            <div class="form-group">
+              <label for="releasedBySelect" class="form-label">
+                <span>LIBERA <strong style="color:var(--accent-rose)">*</strong></span>
+                <span class="tag-link" style="background: rgba(30, 64, 175, 0.12); color: #1e40af;">👤 Supervisor</span>
+              </label>
+              <div class="input-wrapper">
+                <span class="input-icon">👤</span>
+                <select id="releasedBySelect" class="form-control" required>
+                  <option value="" disabled selected>-- Seleccione Quién LIBERA --</option>
+                  <!-- Supervisores autorizados -->
+                </select>
+              </div>
+              <div class="helper-text">Supervisor autorizado que libera y aprueba el pago.</div>
+            </div>
+
+            <!-- 10. CECO (Asignado Automáticamente a LIBERA - Solo Números) -->
+            <div class="form-group">
+              <label for="costCenterInput" class="form-label">
+                <span>CECO <strong style="color:var(--accent-rose)">*</strong></span>
+                <span class="tag-link" style="background: rgba(30, 64, 175, 0.12); color: #1e40af;">🏢 Centro de Costo</span>
+              </label>
+              <div class="input-wrapper">
+                <span class="input-icon">🔢</span>
+                <input type="text" id="costCenterInput" class="form-control" placeholder="" readonly required style="font-family: monospace; font-weight: 700; font-size: 1.05rem; letter-spacing: 0.5px;">
+              </div>
+              <div class="helper-text">Centro de costo asignado a quien libera (solo números).</div>
+            </div>
+
+            <!-- 11. TOTAL (Monto Liquidado) -->
+            <div class="form-group">
+              <label for="orderAmount" class="form-label">
+                <span>TOTAL <strong style="color:var(--accent-rose)">*</strong></span>
+                <span class="tag-link" style="background: rgba(16, 185, 129, 0.15); color: #047857;">💵 Monto Liquidado</span>
+              </label>
+              <div class="input-wrapper">
+                <span class="input-icon">💰</span>
+                <input type="number" id="orderAmount" class="form-control" placeholder="0.00" step="0.01" min="0" required>
+              </div>
+              <div class="helper-text">Monto total liquidado por el servicio.</div>
+            </div>
+
+            <!-- Acciones del Formulario -->
+            <div class="form-actions">
+              <button type="submit" id="btnSubmit" class="btn btn-primary">
+                💾 Registrar Orden de Servicio
+              </button>
+              <button type="button" id="btnGenerateExcel" class="btn btn-excel">
+                📥 Generar Reporte Excel (.xlsx)
+              </button>
+            </div>
+
+          </form>
+        </section>
+
+        <!-- PANEL DE VISUALIZACIÓN Y GESTIÓN EN TIEMPO REAL -->
+        <section class="panel">
+          <div class="table-panel-header">
+            <div class="panel-title">
+              <span>📋</span> Registro de Servicios Capturados
+              <span class="badge-num" id="tableCountBadge">0 Registros</span>
+            </div>
+
+            <!-- Filtros Rápidos -->
+            <div class="table-filter-group">
+              <button class="filter-chip active" data-filter="all">Todos</button>
+              <button class="filter-chip" data-filter="CDN">Solo CDN</button>
+              <button class="filter-chip" data-filter="CCN">Solo CCN</button>
+
+              <!-- Filtro de Agencia exclusivo para Administrador -->
+              <div id="adminAgencyFilterWrapper" style="display: none; align-items: center; gap: 6px; margin-left: 8px;">
+                <span style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted);">🏢 Agencia:</span>
+                <select id="adminAgencyFilter" class="form-control" style="width: auto; padding: 4px 28px 4px 10px; font-size: 0.78rem; height: 30px;">
+                  <option value="all">Todas las Agencias (1 al 24)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 10px; flex-wrap: wrap;">
+            <div class="table-search-box">
+              <input type="text" id="tableSearch" class="form-control" placeholder="🔍 Buscar por proveedor, servicio, ceco, libera..." style="padding-left: 14px;">
+            </div>
+            <div>
+              <button id="btnClearAllOrders" class="btn btn-outline btn-sm" style="color: #f43f5e;" title="Borrar todo el historial">
+                🗑️ Vaciar Registros
+              </button>
+            </div>
+          </div>
+
+          <!-- Tabla de Datos (Columnas idénticas al formato oficial) -->
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Folio</th>
+                  <th>Empresa</th>
+                  <th>PROVEEDOR</th>
+                  <th>NOMBRE</th>
+                  <th>SERVICIO</th>
+                  <th>DESCRIPCION DEL SERVICIO</th>
+                  <th>CONCEPTO</th>
+                  <th>CUENTA</th>
+                  <th>GRUPO DE COMPRA</th>
+                  <th>GERENCIA</th>
+                  <th>LIBERA</th>
+                  <th>CECO</th>
+                  <th>TOTAL</th>
+                  <th>Fecha / Hora</th>
+                  <th style="text-align: center;">Acción</th>
+                </tr>
+              </thead>
+              <tbody id="ordersTableBody">
+                <!-- Renderizado dinámico desde app.js -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Estado vacío si no hay órdenes -->
+          <div id="emptyState" class="empty-state">
+            <div class="empty-state-icon">🚚</div>
+            <h3>Aún no hay servicios registrados</h3>
+            <p>Completa el formulario de la izquierda para registrar la primera orden de pago a tercerizados.</p>
+          </div>
+
+        </section>
+
+      </main>
+
+    </div>
+
+  </div>
+
+  <!-- MODAL: GESTOR DE CATÁLOGOS (PROVEEDORES, SERVICIOS/CUENTAS Y LIBERADORES/CECO) -->
+  <div class="modal-backdrop" id="catalogModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>⚙️ Catálogo de Proveedores, Servicios, Cuentas y Liberadores</h2>
+        <button id="btnCloseCatalog" class="btn btn-outline btn-sm btn-icon">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px;">
+          Aquí puedes gestionar los proveedores (código y nombre), las descripciones de servicio vinculadas a cuenta y los supervisores que liberan con su CECO.
+        </p>
+
+        <!-- Pestañas -->
+        <div class="tabs-nav">
+          <button class="tab-btn active" data-tab="clients">👥 PROVEEDOR ↔ NOMBRE</button>
+          <button class="tab-btn" data-tab="reasons">🚚 DESCRIPCION DEL SERVICIO ↔ CUENTA</button>
+          <button class="tab-btn" data-tab="approvers">👤 LIBERA ↔ CECO</button>
+        </div>
+
+        <!-- Pestaña 1: Proveedores -->
+        <div id="tabClientsContent">
+          <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">
+            👑 <strong>Administración de Proveedores:</strong> Agregue un proveedor y asígnelo a su respectiva sucursal/agencia.
+          </div>
+          <div class="catalog-add-row" style="grid-template-columns: 120px 1fr 180px auto; gap: 8px;">
+            <input type="text" id="newClientId" class="form-control" placeholder="ID Proveedor" style="padding-left:12px;">
+            <input type="text" id="newClientName" class="form-control" placeholder="Nombre completo" style="padding-left:12px;">
+            <select id="newClientAgency" class="form-control" style="font-size: 0.8rem; padding: 6px;">
+              <option value="" disabled selected>-- Asignar Agencia --</option>
+              <!-- Llenado dinámico con las 18 agencias -->
+            </select>
+            <button id="btnAddClient" class="btn btn-primary btn-sm">+ Asignar</button>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; margin: 10px 0 6px 0;">
+            <label style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted);">Filtrar por sucursal:</label>
+            <select id="catalogAgencyFilter" class="form-control" style="max-width: 260px; font-size: 0.78rem; padding: 4px 8px;">
+              <option value="all">Todas las Agencias (1 al 24)</option>
+            </select>
+          </div>
+
+          <div style="max-height: 240px; overflow-y: auto;">
+            <table class="catalog-list-table">
+              <thead>
+                <tr>
+                  <th>PROVEEDOR (Código)</th>
+                  <th>NOMBRE (Persona)</th>
+                  <th>AGENCIA ASIGNADA</th>
+                  <th style="width: 40px;"></th>
+                </tr>
+              </thead>
+              <tbody id="catalogClientsTable">
+                <!-- Se llena dinámicamente -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Pestaña 2: Descripciones de Servicio y Cuentas -->
+        <div id="tabReasonsContent" style="display: none;">
+          <div class="catalog-add-row">
+            <input type="text" id="newReason" class="form-control" placeholder="DESCRIPCION DEL SERVICIO" style="padding-left:12px;">
+            <input type="text" id="newAccount" class="form-control" placeholder="CUENTA contable" style="padding-left:12px;">
+            <button id="btnAddReason" class="btn btn-primary btn-sm">+ Agregar</button>
+          </div>
+
+          <div style="max-height: 240px; overflow-y: auto;">
+            <table class="catalog-list-table">
+              <thead>
+                <tr>
+                  <th>DESCRIPCION DEL SERVICIO</th>
+                  <th>CUENTA</th>
+                  <th style="width: 40px;"></th>
+                </tr>
+              </thead>
+              <tbody id="catalogReasonsTable">
+                <!-- Se llena dinámicamente -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Pestaña 3: Liberadores / CECO -->
+        <div id="tabApproversContent" style="display: none;">
+          <div class="catalog-add-row" style="grid-template-columns: 1fr 1fr auto;">
+            <input type="text" id="newApproverName" class="form-control" placeholder="Nombre (LIBERA)" style="padding-left:12px;">
+            <input type="text" id="newApproverCostCenter" class="form-control" placeholder="CECO (solo números)" style="padding-left:12px;">
+            <button id="btnAddApprover" class="btn btn-primary btn-sm">+ Agregar</button>
+          </div>
+
+          <div style="max-height: 240px; overflow-y: auto;">
+            <table class="catalog-list-table">
+              <thead>
+                <tr>
+                  <th>LIBERA (Supervisor)</th>
+                  <th>CECO (Solo números)</th>
+                  <th style="width: 40px;"></th>
+                </tr>
+              </thead>
+              <tbody id="catalogApproversTable">
+                <!-- Se llena dinámicamente -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-primary btn-sm" id="btnSaveAndCloseCatalog">Cerrar y Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: AUDITORÍA DE CONEXIONES (EXCLUSIVO ADMINISTRADOR) -->
+  <div class="modal-backdrop" id="auditModal">
+    <div class="modal-content" style="max-width: 860px;">
+      <div class="modal-header">
+        <h2>📊 Bitácora de Conexiones & Auditoría de Accesos</h2>
+        <button id="btnCloseAudit" class="btn btn-outline btn-sm btn-icon">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Banner de Estado de Sincronización en la Nube -->
+        <div id="cloudStatusBanner" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: var(--radius-sm); margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span id="cloudStatusDot" style="font-size: 14px;">🟢</span>
+            <span id="cloudStatusText" style="font-size: 0.82rem; font-weight: 700; color: var(--text-main);">Sincronización en Vivo: Google Sheets / Excel</span>
+          </div>
+          <button type="button" class="btn btn-outline btn-sm" id="btnOpenCloudConfig" style="font-size: 0.76rem; padding: 4px 10px;">
+            📊 Conectar Google Sheets / Nube
+          </button>
+        </div>
+
+        <!-- Caja de Configuración de Google Sheets / Firebase -->
+        <div id="cloudConfigBox" style="display: none; padding: 16px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-sm); margin-bottom: 16px;">
+          <div style="font-weight: 700; font-size: 0.9rem; margin-bottom: 6px; color: var(--text-main);">
+            📊 Conexión Automática a tu Hoja de Excel (Google Sheets)
+          </div>
+          <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 12px; line-height: 1.45;">
+            Cada vez que un teléfono o computadora inicie sesión (ej. Masaya, Occidente, Rivas), se registrará automáticamente una fila en tu hoja de Excel de Google Sheets con: <strong>Fecha, Hora, Usuario, ID Agencia, Nombre y Dispositivo</strong>.
+          </p>
+
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px;">
+            <input type="url" id="cloudDbUrlInput" class="form-control" placeholder="Pega aquí el enlace de Google Apps Script o Firebase..." style="flex: 1; min-width: 260px; font-size: 0.82rem; padding: 7px 12px;">
+            <button type="button" class="btn btn-primary btn-sm" id="btnSaveCloudDbUrl">Guardar y Conectar</button>
+            <button type="button" class="btn btn-outline btn-sm" id="btnCancelCloudConfig">Cerrar</button>
+          </div>
+
+          <details style="font-size: 0.76rem; background: var(--bg-secondary); padding: 8px 12px; border-radius: var(--radius-xs); border: 1px solid var(--border-color);">
+            <summary style="cursor: pointer; font-weight: 600; color: #60a5fa;">📋 ¿Cómo crear tu enlace de Google Sheets en 1 minuto? (Haz clic aquí)</summary>
+            <ol style="margin-top: 8px; padding-left: 18px; line-height: 1.5; color: var(--text-muted);">
+              <li>Abre una hoja nueva en <strong>Google Sheets</strong> (Excel de Google Drive).</li>
+              <li>En la fila 1 escribe los títulos: <code>FECHA | HORA | USUARIO | ID | AGENCIA | ROL | DISPOSITIVO</code></li>
+              <li>Ve a <strong>Extensiones</strong> ➔ <strong>Apps Script</strong>.</li>
+              <li>Borra todo y pega el código que te dio el asistente.</li>
+              <li>Haz clic en <strong>Implementar</strong> ➔ <strong>Nueva implementación</strong> ➔ Tipo: <em>Aplicación web</em> ➔ Quién tiene acceso: <em>Cualquier usuario</em> (Anyone).</li>
+              <li>Copia la URL resultante y pégala aquí arriba. ¡Listo!</li>
+            </ol>
+          </details>
+        </div>
+
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px;">
+          Registro oficial en tiempo real de cada inicio de sesión: usuario, ID y nombre de agencia, fecha y hora de conexión.
+        </p>
+
+        <div class="audit-stats-grid">
+          <div class="audit-stat-card">
+            <div class="val" id="auditStatTotal">0</div>
+            <div class="lbl">Total Conexiones</div>
+          </div>
+          <div class="audit-stat-card">
+            <div class="val" id="auditStatToday" style="color: #10b981;">0</div>
+            <div class="lbl">Conexiones Hoy</div>
+          </div>
+          <div class="audit-stat-card">
+            <div class="val" id="auditStatAgencies" style="color: #f59e0b;">0</div>
+            <div class="lbl">Agencias Activas</div>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 10px; flex-wrap: wrap;">
+          <input type="text" id="auditSearch" class="form-control" placeholder="🔍 Filtrar por usuario, agencia, fecha..." style="max-width: 300px; padding-left: 12px;">
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button id="btnExportAuditExcel" class="btn btn-outline btn-sm" style="color: #10b981; border-color: rgba(16, 185, 129, 0.4); font-weight: 600;">
+              📥 Descargar Excel (.xlsx)
+            </button>
+            <button id="btnClearAuditLogs" class="btn btn-outline btn-sm" style="color: #f43f5e;">
+              🗑️ Vaciar Bitácora
+            </button>
+          </div>
+        </div>
+
+        <div style="max-height: 340px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+          <table class="data-table" style="font-size: 0.82rem;">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Usuario</th>
+                <th>ID Agencia</th>
+                <th>Agencia</th>
+                <th>Rol</th>
+                <th>Fecha Conexión</th>
+                <th>Hora Conexión</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="auditTableBody">
+              <!-- Renderizado dinámico desde app.js -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-primary btn-sm" id="btnCloseAuditFooter">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenedor de Alertas Toast -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Lógica Principal -->
+  <script src="app.js"></script>
+</body>
+</html>

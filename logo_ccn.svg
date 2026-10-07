@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" width="320" height="180">
+  <!-- CCN Official Logo - Transparent Background -->
+  <g transform="translate(10, 10)">
+    <!-- Top Big C in Forest Green -->
+    <path d="M 175,34 C 172,14 158,2 136,2 C 114,2 99,17 97,37 L 118,37 C 120,27 126,20 136,20 C 146,20 152,26 154,34 Z" 
+          fill="#15803d" />
+
+    <!-- Bottom Left C in Forest Green -->
+    <path d="M 148,68 C 145,46 130,32 108,32 C 84,32 68,52 68,80 C 68,108 84,128 108,128 C 130,128 145,114 148,92 L 126,92 C 123,103 117,110 108,110 C 96,110 89,97 89,80 C 89,63 96,50 108,50 C 117,50 123,57 126,68 Z" 
+          fill="#15803d" />
+
+    <!-- Big N in Forest Green -->
+    <path d="M 144,48 L 165,48 L 195,96 L 195,48 L 214,48 L 214,124 L 193,124 L 163,76 L 163,124 L 144,124 Z" 
+          fill="#15803d" />
+
+    <!-- Golden Wheat / Barley Spike (Espiga de Cebada) in Mustard Yellow / Golden Amber -->
+    <!-- Central Stem -->
+    <path d="M 210,105 C 225,85 248,50 282,18" 
+          stroke="#d97706" 
+          stroke-width="3.5" 
+          stroke-linecap="round" 
+          fill="none" />
+    <!-- Grains / Leaves of wheat -->
+    <path d="M 276,16 C 286,20 288,32 278,35 C 268,32 268,22 276,16 Z" fill="#d97706" />
+    <path d="M 264,28 C 274,32 276,44 266,47 C 256,44 256,34 264,28 Z" fill="#d97706" />
+    <path d="M 250,42 C 260,46 262,58 252,61 C 242,58 242,48 250,42 Z" fill="#d97706" />
+    <path d="M 236,56 C 246,60 248,72 238,75 C 228,72 228,62 236,56 Z" fill="#d97706" />
+    <path d="M 222,70 C 232,74 234,86 224,89 C 214,86 214,76 222,70 Z" fill="#d97706" />
+
+    <!-- Dynamic Swoosh / Arc in Mustard Yellow -->
+    <path d="M 24,106 C 75,136 185,138 255,92 C 225,124 95,126 24,106 Z" 
+          fill="#d97706" />
+
+    <!-- Text: COMPAÑÍA CERVECERA -->
+    <text x="150" y="146" 
+          text-anchor="middle" 
+          font-family="'Arial Black', 'Montserrat', 'Segoe UI', sans-serif" 
+          font-size="15" 
+          font-weight="900" 
+          letter-spacing="1.2" 
+          fill="#15803d">COMPAÑÍA CERVECERA</text>
+
+    <!-- Text: DE NICARAGUA S.A. -->
+    <text x="150" y="164" 
+          text-anchor="middle" 
+          font-family="'Arial Black', 'Montserrat', 'Segoe UI', sans-serif" 
+          font-size="14" 
+          font-weight="900" 
+          letter-spacing="1.8" 
+          fill="#15803d">DE NICARAGUA S.A.</text>
+  </g>
+</svg>
